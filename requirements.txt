@@ -1,0 +1,3 @@
+bottle==0.12.25
+markovify==0.9.4
+Unidecode==1.3.6

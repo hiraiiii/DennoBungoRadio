@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  
+  <style>
+    body {
+    font-family: "ＭＳ 明朝";
+    font-size: large;
+    background-color: #1b1b33;
+    }
+    h1 {
+      border: 2px solid #ceccff;
+      border-radius: 5px;
+      padding: 10px;
+      text-align: center;
+      color: #a1a355;
+      background-color: #292933;
+    }
+    a{
+      color: #a1a355;
+    }
+    a:hover{
+      color: #5654a2;
+    }
+    label{
+      height: 25px;
+      color: #a1a355;
+    }
+    .box {
+      height: 400px;
+      margin: 1rem;
+      overflow-y: scroll;
+      padding: 1px;
+      color: #ceccff;
+    }
+    .card{
+      background-color: #292933 ;
+      border: 2px solid #ceccff;
+    }
+    .form-select{
+      background-color: #292933;
+      border: 1px solid #ceccff;
+      color: #a1a355;
+    }
+    .form-select:disabled{
+      background-color: #1b1b33;
+    }
+    .btn-start{
+      color: #ceccff;
+      border: 1px solid #ceccff;
+      background-color: #292933;
+    }
+    .btn-end{
+      color: #ceccff;
+      border: 1px solid #ceccff;
+      background-color: #292933;
+    }
+  </style>
+  <title>電脳文豪朗読倶楽部　様々な小説家のラジオが聴けるサイト　芥川 竜之介　芥川 竜之介　カフカ フランツ　坂口 安吾　太宰 治　谷崎 潤一郎　中島 敦　夏目 漱石　ポー エドガー・アラン　宮沢 賢治　森 鴎外　夢野 久作</title>
+</head>
+<body>
+  <div class="container py-3">
+    <div class="row">
+      <h1 class="mb-3 col-12">電脳文豪朗読倶楽部</h1>
+      <a href="/Ginga-Station">銀河ステーション(サイト概要/開発者リンク)</a>
+      <div class="card col-12">
+        <div class="card-header">
+          <form action="/" method="POST">
+            <div class="form-floating" >
+              <select class="form-select" id="authors" aria-label="Floating label select example" name="authors">
+                <option value="0">芥川 竜之介</option>
+                <option value="1">芥川 竜之介</option>
+                <option value="2">カフカ フランツ</option>
+                <option value="3">坂口 安吾</option>
+                <option value="4">太宰 治</option>
+                <option value="5">谷崎 潤一郎</option>
+                <option value="6">中島 敦</option>
+                <option value="7">夏目 漱石</option>
+                <option value="8">ポー エドガー・アラン</option>
+                <option value="9">宮沢 賢治</option>
+                <option value="10">森 鴎外</option>
+                <option value="11">夢野 久作</option>
+              </select>
+              <label for="authors">作家選択</label>
+            </div>
+          <div class="btn-group" role="group" aria-label="Basic button group">
+            <button type="button" id="start_button" class="btn-start">再生</button>
+            <button type="button" id="end_button" class="btn-end">停止</button>
+          </div>
+        </form>
+        </div>
+          <div id="text_container" class="card-body box">
+          このサイトでは、数々の文豪の小説を形態素解析したデータをもとにマルコフ連鎖で作成したテキストを読み上げてくれます。
+          </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+  <script>
+    var selectedValue = 0;
+    // テキスト生成中かどうかのフラグ
+    var generating = false;
+    var readingText = false;
+    var textElements = [];
+    var generationTimer = null;
+    const startBtn  = document.querySelector('#start_button')
+    const stopBtn = document.querySelector('#end_button')
+    
+    function conform(){
+      var confirmResult = confirm("再生を継続しますか？");
+      if (confirmResult) {
+        clearTimeout(generationTimer);
+        generationTimer =setTimeout(conform,60*60*1000);
+      }
+      else{
+        stopGenerating()
+        if (generationTimer !== null) {
+          clearTimeout(generationTimer);
+        }
+      }
+    }
+    // テキスト生成を開始する関数
+    startBtn.addEventListener('click', function() {
+      if (generating || readingText) {
+        return;
+      }
+      generationTimer = setTimeout(conform,60*60*1000);
+      generating = true;
+      $('select').prop('disabled', true);
+      $('#start_button').prop('disabled', true);
+      $('#end_button').prop('disabled', false);
+  
+      // データを取得する関数
+      function fetchData() {
+        $.ajax({
+          url: '/',
+          method: 'POST',
+          data: { start_button: true,authors: selectedValue },
+          dataType: 'text'
+        })
+        .done(function(data) {
+          appendText(data); // 受け取ったテキストを追加して表示
+          const uttr = new SpeechSynthesisUtterance();
+          uttr.text = data;
+          uttr.onstart = function() {
+            readingText = true; // 読み上げ中フラグをセット
+          };
+          uttr.onend = function() {
+            readingText = false;
+            if (generating) {
+              fetchData(); // テキスト読み上げが終了したら再度リクエストを送信
+            }
+          };
+          speechSynthesis.speak(uttr);
+        });
+      }
+  
+      fetchData(); // 最初のリクエストを送信
+    })
+  
+    // テキスト生成を停止する関数
+    stopBtn.addEventListener('click', function() {
+      generating = false;
+
+      $('select').prop('disabled', false);
+      $('#start_button').prop('disabled', false);
+      $('#end_button').prop('disabled', true);
+      $.ajax({
+        url: '/',
+        method: 'POST',
+        data: { finish_button: true }
+      });
+    })
+  
+    // テキストを表示する関数
+    function appendText(text) {
+      var textContainer = document.getElementById("text_container");
+      var newTextElement = document.createElement("span");
+      newTextElement.textContent = text;
+      textElements.push(newTextElement); // 配列に追加
+
+      if (textElements.length > 100) {
+        var removedElement = textElements.shift();
+        textContainer.removeChild(removedElement);
+      }
+
+      textContainer.innerHTML = ''; // テキスト表示エリアをクリア
+      textElements.forEach(function(element) {
+        textContainer.appendChild(element);
+      });
+
+      textContainer.scrollTop = textContainer.scrollHeight;
+    }
+
+    $("#authors").on("change", function() {
+      selectedValue = $(this).val();
+    });
+  </script>
+  
+</body>
+</html>
